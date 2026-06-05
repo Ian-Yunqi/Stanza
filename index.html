@@ -705,7 +705,6 @@ function initMirror() {
 }
 
 var SEEN_KEY = "shufang-seen";
-var DOSE_PREFIX = "shufang-dose-";
 function isStorageAvailable() {
     try { var t = "__test__"; localStorage.setItem(t, t); localStorage.removeItem(t); return true; }
     catch (e) { return false; }
@@ -722,24 +721,8 @@ function pushSeenBook(id) {
         if (!seen.includes(id)) { seen.push(id); if (seen.length > 5) seen.shift(); localStorage.setItem(SEEN_KEY, JSON.stringify(seen)); }
     } catch (e) {}
 }
-function getDailyDose(dateStr) {
-    if (!isStorageAvailable()) return null;
-    return localStorage.getItem(DOSE_PREFIX + dateStr);
-}
-function setDailyDose(dateStr, id) {
-    if (!isStorageAvailable()) return;
-    try { localStorage.setItem(DOSE_PREFIX + dateStr, id); cleanOldDoses(dateStr); } catch (e) {}
-}
-function cleanOldDoses(currentDateStr) {
-    var today = new Date(currentDateStr).getTime();
-    for (var i = 0; i < localStorage.length; i++) {
-        var key = localStorage.key(i);
-        if (key && key.startsWith(DOSE_PREFIX)) {
-            var kt = new Date(key.replace(DOSE_PREFIX, "")).getTime();
-            if (today - kt > 7 * 24 * 60 * 60 * 1000) localStorage.removeItem(key);
-        }
-    }
-}
+
+var dailyGivenIds = [];
 
 function matchBook(tag, books, seenIds) {
     if (tag === "daily") {
@@ -865,15 +848,16 @@ function handleUrlChange() {
     if (!tag) { renderHome(); return; }
     var matchResult;
     if (tag === "daily") {
-        var today = new Date().toLocaleDateString("zh-CN");
-        var savedId = getDailyDose(today);
-        if (savedId) {
-            var b = appBooks.find(function(x) { return x.id === savedId; });
-            matchResult = b ? { book: b, degraded: false } : null;
-        }
-        if (!matchResult) {
-            matchResult = matchBook("daily", appBooks, getSeenBooks());
-            if (matchResult.book) setDailyDose(today, matchResult.book.id);
+        matchResult = matchBook("daily", appBooks, getSeenBooks());
+        if (matchResult.book) {
+            var pool = appBooks.filter(function(b) { return !dailyGivenIds.includes(b.id); });
+            if (!pool.length) {
+                dailyGivenIds = [];
+                pool = appBooks;
+            }
+            var chosen = pool[Math.floor(Math.random() * pool.length)];
+            dailyGivenIds.push(chosen.id);
+            matchResult = { book: chosen, degraded: false };
         }
     } else {
         matchResult = matchBook(tag, appBooks, getSeenBooks());
