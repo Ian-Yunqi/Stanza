@@ -159,22 +159,15 @@ button {
     50%      { transform: translateX(-50%) translateY(-10px); }
 }
 
-/* ====== 8 个词的坐标与个性 ====== */
-.star-word:nth-child(1) { top: 12%; left: 8%;  --float-dur: 5.2s; --float-delay: -1.5s; --star-opacity: 1; }
-.star-word:nth-child(2) { top: 6%;  left: 56%; --float-dur: 6.4s; --float-delay: -3.2s; --star-opacity: 1; }
-.star-word:nth-child(3) { top: 25%; left: 33%; --float-dur: 4.8s; --float-delay: -0.8s; --star-opacity: 0.55; }
-.star-word:nth-child(4) { top: 21%; left: 62%; --float-dur: 5.8s; --float-delay: -2.1s; --star-opacity: 1; }
-.star-word:nth-child(5) { top: 41%; left: 6%;  --float-dur: 7.0s; --float-delay: -4.5s; --star-opacity: 0.6; }
-.star-word:nth-child(6) { top: 51%; left: 50%; --float-dur: 6.0s; --float-delay: -1.0s; --star-opacity: 1; }
-.star-word:nth-child(7) { top: 65%; left: 16%; --float-dur: 5.5s; --float-delay: -3.8s; --star-opacity: 0.55; }
-.star-word:nth-child(8) { top: 73%; left: 58%; --float-dur: 4.5s; --float-delay: -2.5s; --star-opacity: 1; }
-
-/* 移动端微调：窄屏下左列稍微再靠左一点，避免切边 */
-@media (max-width: 639px) {
-    .star-word:nth-child(1) { left: 4%; }
-    .star-word:nth-child(5) { left: 3%; }
-    .star-word:nth-child(7) { left: 10%; }
-}
+/* ====== 每个词条的有机漂浮参数（坐标由 JS 动态注入） ====== */
+.star-word:nth-child(1) { --float-dur: 5.2s; --float-delay: -1.5s; --star-opacity: 1; }
+.star-word:nth-child(2) { --float-dur: 6.4s; --float-delay: -3.2s; --star-opacity: 1; }
+.star-word:nth-child(3) { --float-dur: 4.8s; --float-delay: -0.8s; --star-opacity: 0.55; }
+.star-word:nth-child(4) { --float-dur: 5.8s; --float-delay: -2.1s; --star-opacity: 1; }
+.star-word:nth-child(5) { --float-dur: 7.0s; --float-delay: -4.5s; --star-opacity: 0.6; }
+.star-word:nth-child(6) { --float-dur: 6.0s; --float-delay: -1.0s; --star-opacity: 1; }
+.star-word:nth-child(7) { --float-dur: 5.5s; --float-delay: -3.8s; --star-opacity: 0.55; }
+.star-word:nth-child(8) { --float-dur: 4.5s; --float-delay: -2.5s; --star-opacity: 1; }
 
 /* ======== 处方页 ======== */
 #dose-view { position: relative; padding-top: 40px; padding-bottom: 80px; }
@@ -578,10 +571,39 @@ function initMirror() {
         }, 300);
     });
 
-    // Overlay: 散落星空
+    // Overlay: 散落星空（多预设布局池）
     var gridOverlay = document.getElementById("grid-overlay");
 
-    function shuffleStarWords() {
+    // 12 套精心调校的星空布局库（每套 8 个位置，格式：[top%, left%]）
+    // 核心原则：索引为 5 的槽位固定分配给长词，永远在 50%, 50% 附近，防止溢出。
+    var LAYOUTS = [
+        // 0: 经典散射 (保留)
+        [[8, 10], [5, 58], [22, 35], [18, 65], [40, 8], [48, 50], [62, 18], [72, 60]],
+        // 1: 银河左倾 (保留)
+        [[10, 5], [3, 40], [26, 15], [20, 50], [44, 3], [50, 50], [66, 12], [75, 42]],
+        // 2: 对角星带 (保留)
+        [[8, 12], [5, 48], [28, 28], [22, 58], [45, 8], [52, 50], [68, 32], [76, 62]],
+        // 3: 松石棋局 (保留)
+        [[6, 18], [9, 55], [26, 40], [23, 70], [43, 12], [50, 50], [67, 22], [74, 56]],
+        // 4: 空谷回音 (大谷地，中间空灵，词语在两侧山壁)
+        [[10, 8], [12, 65], [30, 15], [32, 68], [55, 10], [50, 50], [72, 18], [75, 62]],
+        // 5: 流星雨 (右上向左下倾斜的动态感)
+        [[5, 68], [15, 30], [25, 55], [35, 12], [45, 70], [50, 50], [65, 25], [78, 8]],
+        // 6: S型星云 (柔和的蛇形曲线排布)
+        [[8, 60], [18, 35], [28, 12], [42, 25], [38, 65], [50, 50], [66, 68], [76, 30]],
+        // 7: 镜像三角 (上下形成对称的倒三角错觉)
+        [[8, 35], [22, 10], [25, 65], [40, 30], [60, 15], [50, 50], [68, 70], [80, 40]],
+        // 8: 边缘悬浮 (极致中空，词语贴近屏幕安全边缘)
+        [[6, 12], [8, 68], [28, 5], [32, 75], [55, 6], [50, 50], [65, 72], [78, 22]],
+        // 9: Z字波动 (硬朗的折线排布)
+        [[10, 15], [14, 55], [30, 68], [35, 25], [48, 10], [50, 50], [68, 18], [74, 65]],
+        // 10: 十字星芒 (基于对角交叉线的松散排布)
+        [[5, 40], [20, 15], [22, 65], [40, 75], [45, 5], [50, 50], [70, 20], [75, 65]],
+        // 11: 沉淀之湖 (重心偏下，上面空旷如天空)
+        [[15, 20], [12, 65], [35, 45], [45, 15], [58, 70], [52, 50], [72, 25], [78, 60]]
+    ];
+
+    function applyRandomLayout() {
         var shortWords = ["无聊", "迷茫", "厌倦", "浮躁", "疲惫", "烦闷", "平淡"];
         // Fisher-Yates 洗牌
         for (var i = shortWords.length - 1; i > 0; i--) {
@@ -590,12 +612,22 @@ function initMirror() {
             shortWords[i] = shortWords[j];
             shortWords[j] = tmp;
         }
+
+        // 随机选一套布局
+        var layout = LAYOUTS[Math.floor(Math.random() * LAYOUTS.length)];
+
         var shortIdx = 0;
         var stars = document.querySelectorAll("#grid-overlay .star-word");
-        stars.forEach(function(star) {
+        stars.forEach(function(star, idx) {
             var tag = star.getAttribute("data-tag");
-            // 长词"空游无所依"固定在它的槽位不动
+            // 动态写入坐标（新格式 layout[idx] = [top, left]）
+            star.style.top  = layout[idx][0] + "%";
+            star.style.left = layout[idx][1] + "%";
+
+            // 长词"空游无所依"固定在槽位 5，不替换内容
             if (tag === "空游无所依") return;
+
+            // 短词：写入打乱后的内容
             star.setAttribute("data-tag", shortWords[shortIdx]);
             star.textContent = shortWords[shortIdx];
             shortIdx++;
@@ -605,7 +637,7 @@ function initMirror() {
     document.getElementById("btn-show-all").addEventListener("click", function(e) {
         e.stopPropagation();
         markHintAsSeen();
-        shuffleStarWords();
+        applyRandomLayout();
         gridOverlay.classList.add("visible");
         gridOverlay.style.display = "block";
     });
