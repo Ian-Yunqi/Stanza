@@ -759,19 +759,6 @@
         summaryEl.textContent = book.summary || "";
         summaryEl.classList.toggle("hidden", !book.summary);
 
-        var tagsWrap = document.getElementById("render-tags");
-        tagsWrap.innerHTML = "";
-        var allTags = [book.tags.primary].concat(book.tags.secondary || []);
-        allTags.forEach(function (t, i) {
-            if (i > 0) tagsWrap.appendChild(document.createTextNode(" / "));
-            var a = document.createElement("button");
-            a.className = "rx-mood-link";
-            a.textContent = t;
-            a.title = "再取一味「" + t + "」";
-            a.addEventListener("click", function () { openPrescriptionByTags([t], book.id); });
-            tagsWrap.appendChild(a);
-        });
-
         updateBookmarkIcon();
 
         document.getElementById("render-guide").innerHTML = book.guide.split("\n")
